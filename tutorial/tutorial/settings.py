@@ -9,6 +9,12 @@
 
 BOT_NAME = 'tutorial'
 
+# SETTING CONFIGURATION FOR ALL BOTS (BFS, First in First out queue)
+DEPTH_PRIORITY = 1
+SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
+SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'
+# ------ 
+
 SPIDER_MODULES = ['tutorial.spiders']
 NEWSPIDER_MODULE = 'tutorial.spiders'
 

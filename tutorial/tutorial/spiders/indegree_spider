@@ -1,0 +1,59 @@
+import scrapy
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
+
+class frontier_url():
+    def __init__(self, url, count, flag):
+        self.url = url
+        self.count = count
+        self.flag = flag
+
+    def add_count(self):
+        self.count += 1
+
+    def visited(self):
+        self.flag = True
+
+global frontier, found, sites_crawled
+frontier = []
+found = []
+sites_crawled = 0
+
+
+class IndegreeSpider(scrapy.Spider):
+    name = 'indegree'
+    allowed_domains = ['wikipedia.org']
+    #start_urls = ['https://en.wikipedia.org/wiki/Cat']
+
+    def start_requests(self):
+        yield scrapy.Request('https://en.wikipedia.org/wiki/Dog', self.parse)
+
+    def parse(self, response):
+        for href in response.xpath('//a/@href').getall(): # finds all links
+            if sites_crawled == 100:
+                breakpoint
+
+            url = response.urljoin(href)
+
+            if url not in found:
+                found.append(url)
+                item = frontier_url(url, 1, False)
+                frontier.append(item)
+            else:
+                for i in range(len(frontier)):
+                    if frontier[i].url == url:
+                        frontier[i].add_count()
+            
+            # sort list by decending count
+            frontier.sort(reverse=True, key=lambda x:x.count)
+
+            for i in range(len(frontier)):
+                if not frontier[i].flag: # if haven't been checked
+                    frontier[i].visited() # flips flag
+                    yield scrapy.Request(frontier[i].url, self.parse)
+                    break # ends instance
+
+            sites_crawled += 1
+
+            yield {"url": url, "frontier": found} # prints into JSON
+            yield scrapy.Request(url, self.parse) # Recursion

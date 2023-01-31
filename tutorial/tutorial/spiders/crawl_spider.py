@@ -2,10 +2,14 @@ import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 
-class MySpider(CrawlSpider):
-    name = 'MySpider'
-    #allowed_domains = ['example.com']
-    start_urls = ['https://en.wikipedia.org/wiki/Cat']
+class BFSSpider(CrawlSpider):
+    name = 'BFSspider'
+    allowed_domains = ['wikipedia.org']
+    #start_urls = ['https://en.wikipedia.org/wiki/Cat']
+
+
+    def start_requests(self):
+        yield scrapy.Request('https://en.wikipedia.org/wiki/Cat', self.parse)
 
     rules = (
         # Extract links matching 'category.php' (but not matching 'subsection.php')
@@ -24,8 +28,22 @@ class MySpider(CrawlSpider):
         item['description'] = response.xpath('//td[@id="item_description"]/text()').get()
         item['link_text'] = response.meta['link_text']
         url = response.xpath('//td[@id="additional_data"]/@href').get()
-        return response.follow(url, self.parse_additional_page, cb_kwargs=dict(item=item))
+        # returns next urls
+        return response.follow(url, self.parse_additional_page, cb_kwargs=dict(item=item)) 
+
 
     def parse_additional_page(self, response, item):
         item['additional_data'] = response.xpath('//p[@id="additional_data"]/text()').get()
         return item
+
+    def parse(self, response):
+        for href in response.xpath('//a/@href').getall(): # finds all links
+            yield {"url": response.urljoin(href)} # prints into JSON
+            yield scrapy.Request(response.urljoin(href), self.parse) # Recursion
+            
+            
+            
+                 #   yield {"url": response.xpath('//td[@id="additional_data"]/@href').get()}
+
+   #     for h3 in response.xpath('//h3').getall():
+    #        yield {"title": h3}
