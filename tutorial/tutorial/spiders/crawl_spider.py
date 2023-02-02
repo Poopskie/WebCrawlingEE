@@ -2,48 +2,32 @@ import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 
+
+global found, sites_crawled
+found = ['https://www.goodreads.com']
+sites_crawled = 0
+
 class BFSSpider(CrawlSpider):
     name = 'BFSspider'
-    allowed_domains = ['wikipedia.org']
+    allowed_domains = ['goodreads.com']
     #start_urls = ['https://en.wikipedia.org/wiki/Cat']
 
 
     def start_requests(self):
-        yield scrapy.Request('https://en.wikipedia.org/wiki/Cat', self.parse)
+        yield scrapy.Request('https://www.goodreads.com', self.parse)
 
-    rules = (
-        # Extract links matching 'category.php' (but not matching 'subsection.php')
-        # and follow links from them (since no callback means follow=True by default).
-        Rule(LinkExtractor(allow=('category\.php', ), deny=('subsection\.php', ))),
-
-        # Extract links matching 'item.php' and parse them with the spider's method parse_item
-        Rule(LinkExtractor(allow=('item\.php', )), callback='parse_item'),
-    )
-
-    def parse_item(self, response):
-        self.logger.info('Hi, this is an item page! %s', response.url)
-        item = scrapy.Item()
-        item['id'] = response.xpath('//td[@id="item_id"]/text()').re(r'ID: (\d+)')
-        item['name'] = response.xpath('//td[@id="item_name"]/text()').get()
-        item['description'] = response.xpath('//td[@id="item_description"]/text()').get()
-        item['link_text'] = response.meta['link_text']
-        url = response.xpath('//td[@id="additional_data"]/@href').get()
-        # returns next urls
-        return response.follow(url, self.parse_additional_page, cb_kwargs=dict(item=item)) 
-
-
-    def parse_additional_page(self, response, item):
-        item['additional_data'] = response.xpath('//p[@id="additional_data"]/text()').get()
-        return item
 
     def parse(self, response):
+        global found, sites_crawled
         for href in response.xpath('//a/@href').getall(): # finds all links
-            yield {"url": response.urljoin(href)} # prints into JSON
-            yield scrapy.Request(response.urljoin(href), self.parse) # Recursion
-            
-            
-            
-                 #   yield {"url": response.xpath('//td[@id="additional_data"]/@href').get()}
+            if sites_crawled >= 3000:
+                return
 
-   #     for h3 in response.xpath('//h3').getall():
-    #        yield {"title": h3}
+            url = response.urljoin(href)
+            if url not in found: # eliminates duplicates
+                found.append(url)
+                sites_crawled += 1
+                yield {"url": response.urljoin(href), "sitenumber": sites_crawled} # prints into JSON
+                yield scrapy.Request(response.urljoin(href), self.parse) # Recursion
+            
+            
